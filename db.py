@@ -54,10 +54,17 @@ class Database:
                     retry_count INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL DEFAULT (datetime('now')),
                     published_at TEXT,
-                    next_retry_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    next_retry_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    error_message TEXT,
+                    dead_letter_at TEXT
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_outbox_status_next ON outbox(status, next_retry_at);
+
+                CREATE INDEX IF NOT EXISTS idx_outbox_dead ON outbox(status) WHERE status = 'DEAD';
+
+                -- 兼容升级：给旧表补新列（SQLite 无视已存在列的 ADD COLUMN 会报错，所以用 PRAGMA 判断）
+                -- (由于 SQLite 不支持 IF NOT EXISTS ADD COLUMN，以下通过应用层 try/except 跳过)
 
                 CREATE TABLE IF NOT EXISTS idempotency_store (
                     consumer_id TEXT NOT NULL,
